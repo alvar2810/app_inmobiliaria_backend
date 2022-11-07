@@ -1,3 +1,4 @@
+import { service } from '@loopback/core';
 import {
   Count,
   CountSchema,
@@ -16,15 +17,48 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
+import { Llaves } from '../config/llaves';
+import {Credenciales} from '../models';
 import {Usuario} from '../models';
 import {UsuarioRepository} from '../repositories';
+import { AutenticacionService } from '../services';
+const fetch = require("node-fetch");
 
 export class UsuarioController {
   constructor(
     @repository(UsuarioRepository)
     public usuarioRepository : UsuarioRepository,
+    @service(AutenticacionService)
+    public servicioAutenticacion: AutenticacionService
   ) {}
+
+  @post("/identificarUsuario", {
+    responses: {
+      '200': {
+        description: "Identificacion de personas"
+      }
+    }
+  })
+  async identificarUsuario(
+    @requestBody() credenciales: Credenciales
+  ) {
+    let u = await this.servicioAutenticacion.IdentificarUsuario(credenciales.persona, credenciales.clave)
+    if (u) {
+      let token = this.servicioAutenticacion.GenerarTokenJWT(u);
+      return {
+        datos: {
+          nombre: u.nombre,
+          correo: u.correo,
+          id: u.id
+        },
+        tk: token
+      }
+    } else {
+      throw new HttpErrors[401]("Datos invalidos");
+    }
+  }
 
   @post('/usuarios')
   @response(200, {
@@ -44,7 +78,21 @@ export class UsuarioController {
     })
     usuario: Omit<Usuario, 'id'>,
   ): Promise<Usuario> {
-    return this.usuarioRepository.create(usuario);
+
+    let clave = this.servicioAutenticacion.GenerarClave();
+    let claveCifrada = this.servicioAutenticacion.CifrarClave(clave);
+    usuario.clave = claveCifrada;
+    let u = await this.usuarioRepository.create(usuario);
+
+    //Notificar usuario
+    let destino = usuario.correo;
+    let asunto = 'Registro en la plataforma';
+    let contenido = `Hola ${usuario.nombre}, su nombre de usuario es: ${usuario.correo} y su contraseña es: ${clave}`;
+    fetch(` ${Llaves.urlServicioNotificaciones}/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenido}`)
+    .then((data:any) => {
+      console.log(data);
+    })
+    return u;
   }
 
   @get('/usuarios/count')
