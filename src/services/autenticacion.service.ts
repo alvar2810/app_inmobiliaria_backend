@@ -29,7 +29,7 @@ export class AutenticacionService {
 
   IdentificarUsuario(persona: string, clave: string) {
     try {
-      let u = this.usuarioRepository.findOne({where: {correo: persona, clave}});
+      let u = this.usuarioRepository.findOne({where: {correo: persona, clave: clave}});
       if (u) {
         return u;
       }

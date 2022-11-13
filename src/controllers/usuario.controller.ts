@@ -88,7 +88,7 @@ export class UsuarioController {
     let destino = usuario.correo;
     let asunto = 'Registro en la plataforma';
     let contenido = `Hola ${usuario.nombre}, su nombre de usuario es: ${usuario.correo} y su contraseña es: ${clave}`;
-    fetch(` ${Llaves.urlServicioNotificaciones}/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenido}`)
+    fetch(`${Llaves.urlServicioNotificaciones}/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenido}`)
     .then((data:any) => {
       console.log(data);
     })
